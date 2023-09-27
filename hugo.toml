@@ -1,4 +1,4 @@
-baseURL = 'https://owly.org/'
+baseURL = 'https://exploreatgh.github.io/myblog/'
 languageCode = 'zh-cn'
 title = ''
 theme = 'mini'
