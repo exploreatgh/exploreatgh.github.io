@@ -1,4 +1,4 @@
 baseURL = 'https://exploreatgh.github.io/'
 languageCode = 'zh-cn'
-title = ''
+title = 'Tech Blog by Y'
 theme = 'mini'
