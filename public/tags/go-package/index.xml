@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>lrsd</title>
-    <link>https://exploreatgh.github.io/</link>
-    <description>Recent content on lrsd</description>
+    <title>go package on lrsd</title>
+    <link>https://exploreatgh.github.io/tags/go-package/</link>
+    <description>Recent content in go package on lrsd</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 16 Oct 2023 21:32:46 +0800</lastBuildDate><atom:link href="https://exploreatgh.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 16 Oct 2023 21:32:46 +0800</lastBuildDate><atom:link href="https://exploreatgh.github.io/tags/go-package/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Golang 写一个令牌桶限流器</title>
       <link>https://exploreatgh.github.io/posts/2023-10-16-limiter/</link>
@@ -23,15 +23,6 @@
       
       <guid>https://exploreatgh.github.io/posts/2023-10-08-redblacktree/</guid>
       <description>&lt;p&gt;红黑树（Red-Black Tree）是一种自平衡的二叉搜索树，它保持了在插入和删除操作时的平衡性，以确保树的高度保持在对数级别，从而保证了基本的查找、插入和删除操作的平均时间复杂度为O(log n)，其中n是树中的节点数量。红黑树在计算机科学中广泛用于实现高效的数据结构和算法，如集合、映射和动态有序集合。&lt;/p&gt;</description>
-    </item>
-    
-    <item>
-      <title>Golang Gin框架原理解析</title>
-      <link>https://exploreatgh.github.io/posts/2023-10-03-gin/</link>
-      <pubDate>Thu, 05 Oct 2023 23:39:36 +0800</pubDate>
-      
-      <guid>https://exploreatgh.github.io/posts/2023-10-03-gin/</guid>
-      <description>&lt;p&gt;Gin是一款Golang Web框架，以其高性能和轻量级而闻名。本文将深入探讨Gin框架的核心原理，包括HTTP基础、前缀树路由、中间件和洋葱模型。&lt;/p&gt;</description>
     </item>
     
   </channel>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <title>Golang 写一个令牌桶限流器 | lrsd</title>
+
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">    
+<meta name="viewport" content="width=device-width,minimum-scale=1">
+<meta name="description" content="面试过程中遇到代码实现熔断/限流，虽然经典的限流算法都看过，但真正实现起来还是有些手生，自己敲代码，看看可能存在哪些边界/并发case。">
+<meta name="generator" content="Hugo 0.118.2">
+
+
+  <META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+
+
+<link rel="stylesheet" href="/css/style.css">
+
+
+
+<link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
+
+
+
+
+
+
+
+
+  </head>
+
+  <body>
+    <nav class="navigation">
+	
+		<a href="/"> <span class="arrow">←</span>Home</a>
+	
+	<a href="/posts">Archive</a>
+	<a href="/tags">Tags</a>
+	<a href="/about">About</a>
+
+	
+
+	
+</nav>
+
+
+    <main class="main">
+      
+
+<section id="single">
+    <h1 class="title">Golang 写一个令牌桶限流器</h1>
+
+    <div class="tip">
+        <time datetime="2023-10-16 21:32:46 &#43;0800 CST">Oct 16, 2023</time>
+        <span class="split">
+          ·
+        </span>
+        <span>
+          215 words
+        </span>
+        <span class="split">
+          ·
+        </span>
+        <span>
+          2 minute read
+        </span>
+    </div>
+
+    
+    
+
+
+    <div class="content">
+      <p>面试过程中遇到代码实现熔断/限流，虽然经典的限流算法都看过，但真正实现起来还是有些手生，自己敲代码，看看可能存在哪些边界/并发case。</p>
+<p>令牌桶算法作为限流算法的较佳实现，本文主要讨论它的原理和实现。</p>
+<h2 id="令牌桶限流原理">令牌桶限流原理 <a href="#%e4%bb%a4%e7%89%8c%e6%a1%b6%e9%99%90%e6%b5%81%e5%8e%9f%e7%90%86" class="anchor">🔗</a></h2><p>令牌桶算法可以从概念上理解如下：</p>
+<ul>
+<li>每隔1/r秒时间就会向桶中添加一个令牌。</li>
+<li>水桶最多可容纳b个令牌。如果令牌在桶已满时到达，则会被丢弃。</li>
+<li>当一个n字节的数据包（网络层PDU）到达时，</li>
+<li>如果桶中至少有n个令牌，则从桶中删除n个令牌，并将数据包发送到网络。</li>
+<li>如果可用令牌少于n个，则不会从桶中删除任何令牌，并且该数据包被视为不合格。</li>
+</ul>
+<p><p class="markdown-image">
+  <img src="/posts/img_2.png" alt="img_2.png"  />
+</p></p>
+<h3 id="与其他限流器的比较">与其他限流器的比较 <a href="#%e4%b8%8e%e5%85%b6%e4%bb%96%e9%99%90%e6%b5%81%e5%99%a8%e7%9a%84%e6%af%94%e8%be%83" class="anchor">🔗</a></h3><h4 id="计数器限流">计数器限流 <a href="#%e8%ae%a1%e6%95%b0%e5%99%a8%e9%99%90%e6%b5%81" class="anchor">🔗</a></h4><p>在单位时间内维护计数来控制单位时间内最大访问数。如果当前单位时间访问数达到上限，则触发限流。</p>
+<ul>
+<li>优点：易于实现</li>
+<li>缺点：存在临界问题，在两个单位时间交接处，瞬间流量可能达到最大访问数的两倍</li>
+</ul>
+<h4 id="滑动窗口">滑动窗口 <a href="#%e6%bb%91%e5%8a%a8%e7%aa%97%e5%8f%a3" class="anchor">🔗</a></h4><p>为了解决上述边界访问数过大的问题，将单位时间细分成更小的粒度，平滑流量</p>
+<ul>
+<li>优点：相比于计数器限流，流量限制更加平滑</li>
+<li>缺点：需要手动设置滑动窗口的窗口长度，窗口过大，则可能存在访问量尖峰，窗口过小，则单次获取的滑动窗口数较多，占用存储空间大</li>
+</ul>
+<h4 id="漏斗算法">漏斗算法 <a href="#%e6%bc%8f%e6%96%97%e7%ae%97%e6%b3%95" class="anchor">🔗</a></h4><p>将请求加入漏斗中，超过漏斗最大的容量，则拒绝请求，否则以恒定速度处理请求，像漏斗一样。
+<p class="markdown-image">
+  <img src="/posts/img.png" alt="img.png"  />
+</p></p>
+<ul>
+<li>优点：可以一定程度上实现削峰，平滑流量</li>
+<li>缺点：实现复杂，需要使用队列存储请求。另外，只允许以恒定速率处理请求</li>
+</ul>
+<h4 id="令牌桶算法">令牌桶算法 <a href="#%e4%bb%a4%e7%89%8c%e6%a1%b6%e7%ae%97%e6%b3%95" class="anchor">🔗</a></h4><ul>
+<li>优点：可以处理流量小高峰</li>
+<li>缺点：实现复杂</li>
+</ul>
+<h2 id="写一个golang本地令牌桶限流器">写一个golang本地令牌桶限流器 <a href="#%e5%86%99%e4%b8%80%e4%b8%aagolang%e6%9c%ac%e5%9c%b0%e4%bb%a4%e7%89%8c%e6%a1%b6%e9%99%90%e6%b5%81%e5%99%a8" class="anchor">🔗</a></h2><h4 id="初步实现">初步实现 <a href="#%e5%88%9d%e6%ad%a5%e5%ae%9e%e7%8e%b0" class="anchor">🔗</a></h4><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Limiter</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mu</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Mutex</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">limit</span>  <span style="color:#66d9ef">int</span>       <span style="color:#75715e">// 每秒生产的令牌数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">burst</span>  <span style="color:#66d9ef">int</span>       <span style="color:#75715e">// 令牌桶最大令牌数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">tokens</span> <span style="color:#66d9ef">float64</span>   <span style="color:#75715e">// 当前令牌桶的令牌数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">last</span>   <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Time</span> <span style="color:#75715e">// 令牌桶更新的最后时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewLimiter</span>(<span style="color:#a6e22e">limit</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">burst</span> <span style="color:#66d9ef">int</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Limiter</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Limiter</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">limit</span>: <span style="color:#a6e22e">limit</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">burst</span>: <span style="color:#a6e22e">burst</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">limiter</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Limiter</span>) <span style="color:#a6e22e">Check</span>(<span style="color:#a6e22e">reqTokens</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 防止并发访问
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Lock</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Unlock</span>()
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 前置检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 如果请求的token大于令牌桶的最大容量，拒绝请求
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">reqTokens</span> &gt; <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">burst</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span> 
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 计算当前的令牌数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">now</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// todo：当服务请求访问的间隔非常大时，此处可能存在数据溢出问题
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">newTokens</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tokenFromDuration</span>(<span style="color:#a6e22e">now</span>.<span style="color:#a6e22e">Sub</span>(<span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">last</span>), <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">limit</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lastTokens</span> = <span style="color:#a6e22e">min</span>(<span style="color:#a6e22e">newTokens</span><span style="color:#f92672">+</span><span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">tokens</span>, float64(<span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">burst</span>)) <span style="color:#f92672">-</span> float64(<span style="color:#a6e22e">reqTokens</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">lastTokens</span> &lt; float64(<span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span> 
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果可以承接请求，修改令牌桶的令牌数，更新最后访问时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">tokens</span> = <span style="color:#a6e22e">lastTokens</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">limiter</span>.<span style="color:#a6e22e">last</span> = <span style="color:#a6e22e">now</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span> 
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// todo：浮点数*浮点数加剧了精度丢失的问题
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">durationFromTokens</span>(<span style="color:#a6e22e">tokens</span> <span style="color:#66d9ef">float64</span>, <span style="color:#a6e22e">limit</span> <span style="color:#66d9ef">int</span>) <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">duration</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tokens</span> <span style="color:#f92672">/</span> float64(<span style="color:#a6e22e">limit</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#a6e22e">duration</span> <span style="color:#f92672">*</span> float64(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// todo：浮点数*浮点数加剧了精度丢失的问题
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">tokenFromDuration</span>(<span style="color:#a6e22e">duration</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>, <span style="color:#a6e22e">limit</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">float64</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">duration</span>.<span style="color:#a6e22e">Seconds</span>() <span style="color:#f92672">*</span> float64(<span style="color:#a6e22e">limit</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">min</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span> <span style="color:#66d9ef">float64</span>) <span style="color:#66d9ef">float64</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">a</span> &lt; <span style="color:#a6e22e">b</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">a</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">b</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="优化">优化 <a href="#%e4%bc%98%e5%8c%96" class="anchor">🔗</a></h2><p>观察golang的标准限流库time/rate，限流功能也是基于令牌桶算法实现的。它主要提供了三个API：</p>
+<ul>
+<li><code>func (lim *Limiter) AllowN(t time.Time, n int) bool</code> 判断n个事件到达是否会被限流</li>
+<li><code>func (lim *Limiter) ReserveN(t time.Time, n int) *Reservation</code> 返回n个事件需要等待的事件</li>
+<li><code>func (lim *Limiter) WaitN(ctx context.Context, n int) (err error)</code> 若n个事件到达需等待，WaitN将阻塞直到n个事件被放流
+阅读代码，代码在实现功能，保证线程安全的前提下，通过不断降低锁的粒度提高了代码的效率。</li>
+</ul>
+<h2 id="参考">参考 <a href="#%e5%8f%82%e8%80%83" class="anchor">🔗</a></h2><p><a href="https://github.com/golang/time/blob/master/rate/rate.go" target="_blank" rel="noopener">golang标准库限流器</a> <br>
+<a href="https://www.cyhone.com/articles/analisys-of-golang-rate/" target="_blank" rel="noopener">Golang 标准库限流器 time/rate 实现剖析</a>  <br>
+<a href="https://mp.weixin.qq.com/s?__biz=MzI4MTA0OTIxMg==&amp;mid=2247484370&amp;idx=1&amp;sn=6f3562fd263d5d44655e3023f48f0d12&amp;chksm=ebae62c1dcd9ebd76d785ae90e2ef9a8a7178711b5b24008c1b11f5e5b2fde4fd0254a80a4df&amp;scene=21#wechat_redirect" target="_blank" rel="noopener">面试官：来，年轻人！请手撸5种常见限流算法</a> <br>
+<a href="https://juejin.cn/post/7254190852761878586" target="_blank" rel="noopener">四种常见分布式限流算法实现</a></p>
+    </div>
+
+    
+        <div class="tags">
+            
+                <a href="https://exploreatgh.github.io/tags/go-package">go package</a>
+            
+                <a href="https://exploreatgh.github.io/tags/%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1">程序设计</a>
+            
+        </div>
+    
+    
+    
+
+</section>
+
+
+    </main>
+    
+    <footer id="footer">
+    
+
+    <div class="copyright">
+    
+       © Copyright 
+       2023 
+       
+    
+    </div>
+
+    
+      <div class="powerby">
+        Powered by <a href='http://www.gohugo.io/'>Hugo</a> Theme By <a href='https://github.com/nodejh/hugo-theme-mini'>nodejh</a>
+      </div>
+    
+</footer>
+
+
+
+  </body>
+</html>

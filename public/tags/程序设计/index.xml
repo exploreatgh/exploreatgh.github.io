@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>程序设计 on lrsd</title>
+    <link>https://exploreatgh.github.io/tags/%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1/</link>
+    <description>Recent content in 程序设计 on lrsd</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Mon, 16 Oct 2023 21:32:46 +0800</lastBuildDate><atom:link href="https://exploreatgh.github.io/tags/%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Golang 写一个令牌桶限流器</title>
+      <link>https://exploreatgh.github.io/posts/2023-10-16-limiter/</link>
+      <pubDate>Mon, 16 Oct 2023 21:32:46 +0800</pubDate>
+      
+      <guid>https://exploreatgh.github.io/posts/2023-10-16-limiter/</guid>
+      <description>&lt;p&gt;面试过程中遇到代码实现熔断/限流，虽然经典的限流算法都看过，但真正实现起来还是有些手生，自己敲代码，看看可能存在哪些边界/并发case。&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>

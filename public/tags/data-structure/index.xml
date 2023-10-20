@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>data structure on lrsd</title>
+    <link>https://exploreatgh.github.io/tags/data-structure/</link>
+    <description>Recent content in data structure on lrsd</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sun, 08 Oct 2023 10:41:26 +0800</lastBuildDate><atom:link href="https://exploreatgh.github.io/tags/data-structure/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Golang 红黑树 redblacktree</title>
+      <link>https://exploreatgh.github.io/posts/2023-10-08-redblacktree/</link>
+      <pubDate>Sun, 08 Oct 2023 10:41:26 +0800</pubDate>
+      
+      <guid>https://exploreatgh.github.io/posts/2023-10-08-redblacktree/</guid>
+      <description>&lt;p&gt;红黑树（Red-Black Tree）是一种自平衡的二叉搜索树，它保持了在插入和删除操作时的平衡性，以确保树的高度保持在对数级别，从而保证了基本的查找、插入和删除操作的平均时间复杂度为O(log n)，其中n是树中的节点数量。红黑树在计算机科学中广泛用于实现高效的数据结构和算法，如集合、映射和动态有序集合。&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>
